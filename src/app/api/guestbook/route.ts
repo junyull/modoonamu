@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server'
 
-// 임시 데이터 저장소 (실제로는 데이터베이스를 사용해야 합니다)
-let entries = [
-  {
-    id: 1,
-    name: "김모두",
-    message: "좋은 하루 보내세요! 😊",
-    createdAt: "2024-03-20 14:30"
-  },
-  {
-    id: 2,
-    name: "이나무",
-    message: "항상 응원합니다! 💪",
-    createdAt: "2024-03-20 15:45"
-  }
-]
+// 임시 데이터 저장소
+const entries = new Map<string, {
+  id: string
+  name: string
+  message: string
+  createdAt: string
+}>()
 
 export async function GET() {
   return NextResponse.json(entries)

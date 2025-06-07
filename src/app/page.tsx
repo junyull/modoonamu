@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import UseCaseCarousel from './components/UseCaseCarousel'
 import { isLoggedIn } from './utils/auth'
+import Image from 'next/image'
 
 export default function Home() {
   const router = useRouter()
@@ -25,25 +26,26 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">모두트리</h1>
-        <p className="text-lg text-white/80 mb-10">모두트리는 대한민국 5,500만명에게<br />
-        작지만 의미 있는 한페이지를 선물합니다.</p>
-        
-        <div className="grid gap-3 w-full max-w-sm mx-auto mb-16">
-          <button
-            onClick={handleCreateClick}
-            className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl text-center text-[15px] hover:bg-blue-700 transition-colors backdrop-blur-sm border border-blue-500/30">
-            내 사이트 만들기
-          </button>
-          
-          <button
-            onClick={handleMySitesClick}
-            className="bg-sky-500 text-white px-6 py-3.5 rounded-2xl text-center text-[15px] hover:bg-sky-600 transition-colors backdrop-blur-sm border border-sky-400/30">
-            내 사이트 보기
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
+      <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+        나만의 링크 페이지를
+        <br />
+        만들어보세요
+      </h1>
+      
+      <div className="flex gap-4 mt-8">
+        <Link
+          href="/create"
+          className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+        >
+          새 사이트 만들기
+        </Link>
+        <Link
+          href="/demo"
+          className="px-6 py-3 bg-zinc-800 text-white rounded-full font-medium hover:bg-zinc-700 transition-colors"
+        >
+          데모 사이트 보기
+        </Link>
       </div>
 
       <UseCaseCarousel />

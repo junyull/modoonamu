@@ -59,7 +59,7 @@ export default function CreateSite() {
     if (slug) {
       checkSlug(slug)
     }
-  }, [slug])
+  }, [slug, checkSlug])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
