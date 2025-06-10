@@ -12,6 +12,7 @@ export default function CreateSite() {
   const [description, setDescription] = useState('')
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [template, setTemplate] = useState<'guestbook' | 'calendar' | null>(null)
+  const [slug, setSlug] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function CreateSite() {
       return
     }
 
-    if (!user?.username) {
+    if (!user) {
       alert('사용자 정보를 불러올 수 없습니다.')
       return
     }
@@ -57,7 +58,7 @@ export default function CreateSite() {
           description,
           profileImage,
           template,
-          slug: user.username
+          slug: slug || user.username // slug가 없으면 username 사용
         }),
       })
 
@@ -140,6 +141,30 @@ export default function CreateSite() {
                   placeholder="사이트 이름을 입력하세요"
                   required
                 />
+              </div>
+
+              {/* URL 주소 */}
+              <div>
+                <label htmlFor="slug" className="block text-sm font-medium text-zinc-300 mb-1">
+                  URL 주소
+                </label>
+                <div className="flex items-center space-x-2">
+                  <span className="text-zinc-500">modoonamu.vercel.app/</span>
+                  <input
+                    type="text"
+                    id="slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                    className="flex-1 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={user.username || 'my-site'}
+                    pattern="[a-z0-9-]{3,20}"
+                    title="영문 소문자, 숫자, 하이픈만 사용 가능하며 3-20자여야 합니다"
+                  />
+                </div>
+                <p className="mt-1 text-sm text-zinc-500">
+                  영문 소문자, 숫자, 하이픈만 사용 가능하며 3-20자여야 합니다.<br/>
+                  입력하지 않으면 사용자 이름({user.username})이 사용됩니다.
+                </p>
               </div>
 
               {/* 사이트 설명 */}
