@@ -1,9 +1,25 @@
 {
+  "version": 2,
   "public": true,
   "routes": [
+    { 
+      "src": "/templates/calendar.*", 
+      "dest": "/templates/calendar" 
+    },
+    { 
+      "src": "/templates/guestbook.*", 
+      "dest": "/templates/guestbook" 
+    }
+  ],
+  "headers": [
     {
-      "src": "/templates/(.*)",
-      "continue": true
+      "source": "/templates/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 } 
