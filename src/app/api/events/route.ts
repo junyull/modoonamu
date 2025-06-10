@@ -1,40 +1,74 @@
 import { NextResponse } from 'next/server'
+import { db } from '@/lib/firebase'
+import { collection, query, where, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore'
 
-// 임시 데이터 저장소 (실제로는 데이터베이스를 사용해야 합니다)
-let events = [
-  {
-    id: 1,
-    date: new Date(2024, 2, 25).toISOString(),
-    title: "3월 정기 모임",
-    description: "오후 2시, 커뮤니티 센터에서 정기 모임이 있습니다.",
-    isNotice: true
-  },
-  {
-    id: 2,
-    date: new Date(2024, 2, 28).toISOString(),
-    title: "봄맞이 대청소",
-    description: "전체 구성원이 참여하는 봄맞이 대청소가 진행됩니다.",
-    isNotice: true
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const siteId = searchParams.get('siteId')
+
+  if (!siteId) {
+    return NextResponse.json({ error: 'Site ID is required' }, { status: 400 })
   }
-]
 
-export async function GET() {
-  return NextResponse.json(events)
+  try {
+    const eventsRef = collection(db, 'events')
+    const q = query(eventsRef, where('siteId', '==', siteId))
+    const querySnapshot = await getDocs(q)
+    
+    const events = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    return NextResponse.json(events)
+  } catch (error) {
+    console.error('이벤트 조회 실패:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function POST(request: Request) {
-  const event = await request.json()
-  const newEvent = {
-    id: events.length + 1,
-    ...event,
-    date: new Date(event.date).toISOString()
+  const { searchParams } = new URL(request.url)
+  const siteId = searchParams.get('siteId')
+
+  if (!siteId) {
+    return NextResponse.json({ error: 'Site ID is required' }, { status: 400 })
   }
-  events.push(newEvent)
-  return NextResponse.json(newEvent)
+
+  try {
+    const data = await request.json()
+    const eventsRef = collection(db, 'events')
+    
+    const newEvent = {
+      siteId,
+      date: data.date,
+      title: data.title,
+      description: data.description,
+      isNotice: data.isNotice || false,
+      createdAt: new Date().toISOString()
+    }
+
+    const docRef = await addDoc(eventsRef, newEvent)
+    return NextResponse.json({ id: docRef.id, ...newEvent })
+  } catch (error) {
+    console.error('이벤트 생성 실패:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function DELETE(request: Request) {
-  const { id } = await request.json()
-  events = events.filter(event => event.id !== id)
-  return NextResponse.json({ success: true })
+  try {
+    const data = await request.json()
+    const { id } = data
+
+    if (!id) {
+      return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
+    }
+
+    await deleteDoc(doc(db, 'events', id))
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('이벤트 삭제 실패:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 } 

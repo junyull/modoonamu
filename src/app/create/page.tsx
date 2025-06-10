@@ -3,63 +3,22 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { debounce } from 'lodash'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function CreateSite() {
   const router = useRouter()
+  const { user } = useAuth()
   const [siteName, setSiteName] = useState('')
   const [description, setDescription] = useState('')
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [template, setTemplate] = useState<'guestbook' | 'calendar' | null>(null)
-  const [slug, setSlug] = useState('')
-  const [slugError, setSlugError] = useState<string | null>(null)
-  const [isSlugAvailable, setIsSlugAvailable] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // slug 자동 생성
   useEffect(() => {
-    if (siteName && !slug) {
-      const generatedSlug = siteName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-') // 영문 소문자, 숫자가 아닌 문자를 하이픈으로 변경
-        .replace(/-+/g, '-') // 연속된 하이픈을 하나로 합침
-        .replace(/^-|-$/g, '') // 시작과 끝의 하이픈 제거
-      setSlug(generatedSlug)
+    if (!user) {
+      router.push('/login?redirect=/create')
     }
-  }, [siteName, slug])
-
-  // slug 중복 체크
-  const checkSlug = debounce(async (value: string) => {
-    if (!value) {
-      setSlugError(null)
-      setIsSlugAvailable(false)
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/site/check-slug?slug=${value}`)
-      const data = await response.json()
-
-      if (!data.available) {
-        setSlugError(data.error || '이미 사용 중인 주소입니다.')
-        setIsSlugAvailable(false)
-      } else {
-        setSlugError(null)
-        setIsSlugAvailable(true)
-      }
-    } catch (error) {
-      console.error('URL 중복 체크 실패:', error)
-      setSlugError('URL 중복 체크에 실패했습니다.')
-      setIsSlugAvailable(false)
-    }
-  }, 500)
-
-  // slug 변경 시 중복 체크
-  useEffect(() => {
-    if (slug) {
-      checkSlug(slug)
-    }
-  }, [slug, checkSlug])
+  }, [user, router])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -74,28 +33,20 @@ export default function CreateSite() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     if (!template) {
       alert('템플릿을 선택해주세요.')
       return
     }
-    if (!isSlugAvailable) {
-      alert('사용할 수 없는 URL입니다.')
+
+    if (!user?.username) {
+      alert('사용자 정보를 불러올 수 없습니다.')
       return
     }
     
     setIsLoading(true)
 
     try {
-      // slug 등록
-      await fetch('/api/site/check-slug', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ slug }),
-      })
-
-      // 사이트 정보 저장
       const response = await fetch('/api/site', {
         method: 'POST',
         headers: {
@@ -106,13 +57,20 @@ export default function CreateSite() {
           description,
           profileImage,
           template,
-          slug,
+          slug: user.username
         }),
       })
+
+      if (!response.ok) {
+        throw new Error('사이트 생성에 실패했습니다.')
+      }
       
       const site = await response.json()
-      // 생성된 사이트로 이동
-      router.push(`/sites/${site.id}`)
+      if (template === 'guestbook') {
+        router.push(`/templates/guestbook?site=${site.id}`)
+      } else if (template === 'calendar') {
+        router.push(`/templates/calendar?site=${site.id}`)
+      }
     } catch (error) {
       console.error('사이트 생성에 실패했습니다:', error)
       alert('사이트 생성에 실패했습니다.')
@@ -120,6 +78,8 @@ export default function CreateSite() {
       setIsLoading(false)
     }
   }
+
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-zinc-900 py-12">
@@ -180,40 +140,6 @@ export default function CreateSite() {
                   placeholder="사이트 이름을 입력하세요"
                   required
                 />
-              </div>
-
-              {/* URL 주소 */}
-              <div>
-                <label htmlFor="slug" className="block text-sm font-medium text-zinc-300 mb-1">
-                  URL 주소
-                </label>
-                <div className="flex items-center space-x-2">
-                  <span className="text-zinc-400">sites/</span>
-                  <input
-                    type="text"
-                    id="slug"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                    className={`
-                      flex-1 px-4 py-2 bg-zinc-900 border rounded-lg text-white focus:outline-none focus:ring-2
-                      ${slugError 
-                        ? 'border-red-500 focus:ring-red-500' 
-                        : isSlugAvailable 
-                          ? 'border-green-500 focus:ring-green-500' 
-                          : 'border-zinc-700 focus:ring-blue-500'
-                      }
-                    `}
-                    placeholder="my-site"
-                    pattern="[a-z0-9-]+"
-                    required
-                  />
-                </div>
-                {slugError && (
-                  <p className="mt-1 text-sm text-red-500">{slugError}</p>
-                )}
-                {isSlugAvailable && (
-                  <p className="mt-1 text-sm text-green-500">사용 가능한 주소입니다.</p>
-                )}
               </div>
 
               {/* 사이트 설명 */}
@@ -279,10 +205,10 @@ export default function CreateSite() {
               {/* 제출 버튼 */}
               <button
                 type="submit"
-                disabled={isLoading || !template || !isSlugAvailable}
+                disabled={isLoading || !template}
                 className={`
                   w-full py-3 rounded-lg font-medium
-                  ${isLoading || !template || !isSlugAvailable
+                  ${isLoading || !template
                     ? 'bg-blue-600/50 text-white/50 cursor-not-allowed' 
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                   }

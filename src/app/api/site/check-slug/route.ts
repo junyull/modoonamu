@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
+export const dynamic = 'force-static'
+export const revalidate = 0
+
 // 임시 데이터 저장소 (실제로는 데이터베이스를 사용해야 합니다)
 const usedSlugs = new Set<string>()
 

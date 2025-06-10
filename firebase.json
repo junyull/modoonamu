@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "out",
+    "source": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -9,5 +9,9 @@
     "frameworksBackend": {
       "region": "asia-east1"
     }
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
   }
-} 
+}

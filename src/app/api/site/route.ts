@@ -15,35 +15,26 @@ interface SiteInfo {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const siteId = searchParams.get('id')
-  const slug = searchParams.get('slug')
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'Site ID is required' }, { status: 400 })
+  }
 
   try {
-    const sitesRef = collection(db, 'sites')
+    const siteRef = doc(db, 'sites', id)
+    const siteSnap = await getDoc(siteRef)
 
-    if (siteId) {
-      const siteDoc = await getDoc(doc(sitesRef, siteId))
-      if (!siteDoc.exists()) {
-        return NextResponse.json({ error: 'Site not found' }, { status: 404 })
-      }
-      return NextResponse.json({ id: siteDoc.id, ...siteDoc.data() })
+    if (!siteSnap.exists()) {
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 })
     }
 
-    if (slug) {
-      const q = query(sitesRef, where('slug', '==', slug))
-      const querySnapshot = await getDocs(q)
-      
-      if (querySnapshot.empty) {
-        return NextResponse.json({ error: 'Site not found' }, { status: 404 })
-      }
-      
-      const siteDoc = querySnapshot.docs[0]
-      return NextResponse.json({ id: siteDoc.id, ...siteDoc.data() })
-    }
-
-    return NextResponse.json({ error: 'ID or slug is required' }, { status: 400 })
+    return NextResponse.json({
+      id: siteSnap.id,
+      ...siteSnap.data()
+    })
   } catch (error) {
-    console.error('사이트 조회 실패:', error)
+    console.error('사이트 정보 조회 실패:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

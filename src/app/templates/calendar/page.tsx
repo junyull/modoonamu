@@ -4,23 +4,31 @@ import { useState, useEffect } from 'react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 
 interface SiteInfo {
+  id: string
   name: string
   description: string
   profileImage: string
 }
 
 interface Event {
-  id: number
+  id: string
+  siteId: string
   date: string
   title: string
   description: string
   isNotice?: boolean
+  createdAt: string
 }
 
 export default function CalendarTemplate() {
+  const searchParams = useSearchParams()
+  const siteId = searchParams.get('site')
+  
   const [siteInfo, setSiteInfo] = useState<SiteInfo>({
+    id: '',
     name: '',
     description: '',
     profileImage: ''
@@ -40,23 +48,37 @@ export default function CalendarTemplate() {
   // 사이트 정보를 가져옵니다
   useEffect(() => {
     const fetchSiteInfo = async () => {
+      if (!siteId) return
+      
       try {
-        const response = await fetch('/api/site')
+        const response = await fetch(`/api/site?id=${siteId}`)
         const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || '사이트 정보를 불러오는데 실패했습니다.')
+        }
+
         setSiteInfo(data)
       } catch (error) {
         console.error('사이트 정보를 불러오는데 실패했습니다:', error)
       }
     }
     fetchSiteInfo()
-  }, [])
+  }, [siteId])
 
   // 서버에서 이벤트 데이터를 가져옵니다
   useEffect(() => {
     const fetchEvents = async () => {
+      if (!siteId) return
+      
       try {
-        const response = await fetch('/api/events')
+        const response = await fetch(`/api/events?siteId=${siteId}`)
         const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || '이벤트를 불러오는데 실패했습니다.')
+        }
+
         setEvents(data)
       } catch (error) {
         console.error('이벤트를 불러오는데 실패했습니다:', error)
@@ -65,7 +87,7 @@ export default function CalendarTemplate() {
       }
     }
     fetchEvents()
-  }, [])
+  }, [siteId])
 
   const startDate = startOfMonth(currentDate)
   const endDate = endOfMonth(currentDate)
@@ -86,43 +108,57 @@ export default function CalendarTemplate() {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (selectedDate && newEvent.title) {
-      try {
-        const response = await fetch('/api/events', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            date: selectedDate.toISOString(),
-            title: newEvent.title,
-            description: newEvent.description,
-            isNotice: newEvent.isNotice
-          }),
-        })
-        const addedEvent = await response.json()
-        setEvents([...events, addedEvent])
-        setNewEvent({ title: '', description: '', isNotice: false })
-        setShowEventForm(false)
-      } catch (error) {
-        console.error('일정 추가에 실패했습니다:', error)
+    if (!siteId || !selectedDate || !newEvent.title) return
+
+    try {
+      const response = await fetch(`/api/events?siteId=${siteId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: selectedDate.toISOString(),
+          title: newEvent.title,
+          description: newEvent.description,
+          isNotice: newEvent.isNotice
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('일정 추가에 실패했습니다.')
       }
+
+      const addedEvent = await response.json()
+      setEvents([...events, addedEvent])
+      setNewEvent({ title: '', description: '', isNotice: false })
+      setShowEventForm(false)
+    } catch (error) {
+      console.error('일정 추가에 실패했습니다:', error)
+      alert('일정 추가에 실패했습니다.')
     }
   }
 
-  const handleDeleteEvent = async (id: number) => {
+  const handleDeleteEvent = async (id: string) => {
+    if (!siteId) return
+
     try {
-      await fetch('/api/events', {
+      const response = await fetch(`/api/events?siteId=${siteId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ id }),
       })
+
+      if (!response.ok) {
+        throw new Error('일정 삭제에 실패했습니다.')
+      }
+
       setEvents(events.filter(event => event.id !== id))
       setShowEventDetail(false)
     } catch (error) {
       console.error('일정 삭제에 실패했습니다:', error)
+      alert('일정 삭제에 실패했습니다.')
     }
   }
 

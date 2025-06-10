@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 
 interface SiteInfo {
+  id: string
   name: string
   description: string
   profileImage: string
@@ -17,7 +19,11 @@ interface GuestbookEntry {
 }
 
 export default function GuestbookTemplate() {
+  const searchParams = useSearchParams()
+  const siteId = searchParams.get('site')
+  
   const [siteInfo, setSiteInfo] = useState<SiteInfo>({
+    id: '',
     name: '',
     description: '',
     profileImage: ''
@@ -30,23 +36,37 @@ export default function GuestbookTemplate() {
   // 사이트 정보를 가져옵니다
   useEffect(() => {
     const fetchSiteInfo = async () => {
+      if (!siteId) return
+      
       try {
-        const response = await fetch('/api/site')
+        const response = await fetch(`/api/site?id=${siteId}`)
         const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || '사이트 정보를 불러오는데 실패했습니다.')
+        }
+
         setSiteInfo(data)
       } catch (error) {
         console.error('사이트 정보를 불러오는데 실패했습니다:', error)
       }
     }
     fetchSiteInfo()
-  }, [])
+  }, [siteId])
 
   // 방명록 데이터를 가져옵니다
   useEffect(() => {
     const fetchEntries = async () => {
+      if (!siteId) return
+      
       try {
-        const response = await fetch('/api/guestbook')
+        const response = await fetch(`/api/guestbook?siteId=${siteId}`)
         const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || '방명록을 불러오는데 실패했습니다.')
+        }
+
         setEntries(data)
       } catch (error) {
         console.error('방명록을 불러오는데 실패했습니다:', error)
@@ -55,13 +75,14 @@ export default function GuestbookTemplate() {
       }
     }
     fetchEntries()
-  }, [])
+  }, [siteId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!siteId) return
     
     try {
-      const response = await fetch('/api/guestbook', {
+      const response = await fetch(`/api/guestbook?siteId=${siteId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,12 +92,18 @@ export default function GuestbookTemplate() {
           message,
         }),
       })
+
+      if (!response.ok) {
+        throw new Error('방명록 작성에 실패했습니다.')
+      }
+
       const newEntry = await response.json()
       setEntries([newEntry, ...entries])
       setName('')
       setMessage('')
     } catch (error) {
       console.error('방명록 작성에 실패했습니다:', error)
+      alert('방명록 작성에 실패했습니다.')
     }
   }
 
@@ -168,7 +195,17 @@ export default function GuestbookTemplate() {
             >
               <div className="flex justify-between items-start mb-2">
                 <span className="font-medium text-white">{entry.name}</span>
-                <span className="text-sm text-zinc-400">{entry.createdAt}</span>
+                <span className="text-sm text-zinc-400">
+                  {new Date(entry.createdAt).toLocaleString('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  })}
+                </span>
               </div>
               <p className="text-zinc-300">{entry.message}</p>
             </div>
