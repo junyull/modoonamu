@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { addDoc, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 export default function NewSitePage() {
@@ -12,6 +11,7 @@ export default function NewSitePage() {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
+  const [template, setTemplate] = useState('calendar') // 기본값 calendar
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -26,19 +26,30 @@ export default function NewSitePage() {
     setLoading(true)
 
     try {
-      const sitesRef = collection(db, 'sites')
-      await addDoc(sitesRef, {
-        name,
-        slug,
-        description,
-        userId: user.uid,
-        createdAt: new Date().toISOString()
+      const response = await fetch('/api/sites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          slug,
+          description,
+          template,
+          userId: user.uid
+        }),
       })
 
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || '사이트 생성에 실패했습니다.')
+      }
+
       router.push('/dashboard')
-    } catch (error) {
+    } catch (error: any) {
       console.error('사이트 생성 중 오류가 발생했습니다:', error)
-      setError('사이트를 생성하는 중 오류가 발생했습니다.')
+      setError(error.message || '사이트를 생성하는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -75,20 +86,41 @@ export default function NewSitePage() {
 
           <div>
             <label htmlFor="slug" className="block text-sm font-medium text-zinc-300 mb-2">
-              URL 슬러그
+              URL 주소
             </label>
-            <div className="flex items-center">
-              <span className="text-zinc-500 mr-2">/</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-zinc-500">modoonamu.vercel.app/</span>
               <input
                 type="text"
                 id="slug"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                 className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="my-awesome-site"
+                placeholder="my-site"
+                pattern="[a-z0-9-]{3,20}"
+                title="영문 소문자, 숫자, 하이픈만 사용 가능하며 3-20자여야 합니다"
                 required
               />
             </div>
+            <p className="mt-1 text-sm text-zinc-500">
+              영문 소문자, 숫자, 하이픈만 사용 가능하며 3-20자여야 합니다
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="template" className="block text-sm font-medium text-zinc-300 mb-2">
+              템플릿 선택
+            </label>
+            <select
+              id="template"
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="calendar">일정표</option>
+              <option value="guestbook">방명록</option>
+            </select>
           </div>
 
           <div>
@@ -102,7 +134,6 @@ export default function NewSitePage() {
               className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="사이트에 대한 간단한 설명을 입력해주세요"
               rows={4}
-              required
             />
           </div>
 
